@@ -14,6 +14,7 @@ from skyblock_profit_scanner import BAZAAR_TAX, BAZAAR_URL, ITEMS_URL, build_row
 
 SHOP_PRICES_FILE = Path(__file__).with_name("npc_shop_prices.json")
 RECIPES_FILE = Path(__file__).with_name("enchanted_recipes.json")
+AD_CONFIG_FILE = Path(__file__).with_name("adsense_config.js")
 
 
 PAGE = r"""<!doctype html>
@@ -50,6 +51,10 @@ PAGE = r"""<!doctype html>
     .profit { color: #72e3a4; font-weight: 700; }
     .formula { color: #a9caff; white-space: nowrap; }
     .error { color: #ff8e8e; }
+    .ad-slot { min-height: 100px; display: grid; place-items: center; margin: 18px 0; border: 1px dashed #405266; border-radius: 8px; background: #121c26; color: #7f91a4; font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
+    .ad-slot:has(ins) { display: block; min-height: 0; border-style: solid; }
+    footer { margin: 28px 0 4px; color: #8e9baa; font-size: .85rem; }
+    footer a { color: #a9caff; }
   </style>
 </head>
 <body data-route="__ROUTE__">
@@ -61,6 +66,7 @@ PAGE = r"""<!doctype html>
   </nav>
   <p id="intro"></p>
   <button id="refresh">Refresh live prices</button><span id="status">Loading...</span>
+  <div class="ad-slot" data-ad-slot="header"><span>Advertisement</span></div>
 
   <h2>Calculator settings</h2>
   <div class="settings">
@@ -79,6 +85,9 @@ PAGE = r"""<!doctype html>
     </table>
   </div>
 
+  <div class="ad-slot" data-ad-slot="footer"><span>Advertisement</span></div>
+  <footer>Market data is informational only. <a href="/privacy">Privacy policy</a></footer>
+  <script src="/adsense-config.js"></script>
   <script>
     const route = document.body.dataset.route;
     const configurations = {
@@ -117,6 +126,24 @@ PAGE = r"""<!doctype html>
     const cell = (row, value, className = '') => {
       const td = document.createElement('td'); td.textContent = value; td.className = className; row.append(td);
     };
+    function initializeAds() {
+      const ads = window.SKYBLOCK_ADSENSE || {};
+      const client = String(ads.client || '');
+      if (!/^ca-pub-\d+$/.test(client)) return;
+      if (!document.querySelector('script[data-adsense-loader]')) {
+        const loader = document.createElement('script'); loader.async = true; loader.dataset.adsenseLoader = 'true';
+        loader.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${client}`;
+        loader.crossOrigin = 'anonymous'; document.head.append(loader);
+      }
+      for (const placeholder of document.querySelectorAll('[data-ad-slot]')) {
+        const slot = String((ads.slots || {})[placeholder.dataset.adSlot] || '');
+        if (!/^\d+$/.test(slot)) continue;
+        const unit = document.createElement('ins'); unit.className = 'adsbygoogle'; unit.style.display = 'block';
+        unit.dataset.adClient = client; unit.dataset.adSlot = slot; unit.dataset.adFormat = 'auto'; unit.dataset.fullWidthResponsive = 'true';
+        placeholder.replaceChildren(unit);
+        (window.adsbygoogle = window.adsbygoogle || []).push({});
+      }
+    }
     function restoreSettings() {
       try {
         const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
@@ -191,6 +218,7 @@ PAGE = r"""<!doctype html>
     refreshButton.addEventListener('click', () => load(true));
     for (const input of [coinsInput, slotsInput]) input.addEventListener('input', () => { saveSettings(); if (data) render(data); });
     restoreSettings();
+    initializeAds();
     load();
   </script>
 </body>
@@ -275,6 +303,12 @@ def market_sections(refresh: bool) -> dict[str, list[dict[str, float | str | int
     }
 
 
+PRIVACY_PAGE = """<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Privacy Policy</title>
+<style>body{max-width:800px;margin:0 auto;padding:28px 18px;font-family:system-ui,sans-serif;line-height:1.55;background:#10151c;color:#eef3f8}a{color:#a9caff}p{color:#c8d4df}</style></head>
+<body><h1>Privacy Policy</h1><p>This calculator requests public Hypixel market data to display profit estimates. It stores only calculator settings in your browser's local storage.</p><p>If advertising is enabled, advertising providers such as Google may use cookies or similar technologies to serve and measure ads. Review the advertising provider's privacy policy for details and available controls.</p><p><a href="/">Return to calculator</a></p></body></html>"""
+
+
 class DashboardHandler(BaseHTTPRequestHandler):
     PAGE_ROUTES = {
         "/": ("bazaar_to_npc", "SkyBlock Bazaar to NPC Profit Calculator"),
@@ -292,6 +326,22 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802
         request = urlparse(self.path)
+        if request.path == "/adsense-config.js":
+            content = AD_CONFIG_FILE.read_bytes() if AD_CONFIG_FILE.exists() else b"window.SKYBLOCK_ADSENSE = {};"
+            self.send_response(200)
+            self.send_header("Content-Type", "application/javascript; charset=utf-8")
+            self.send_header("Content-Length", str(len(content)))
+            self.end_headers()
+            self.wfile.write(content)
+            return
+        if request.path == "/privacy":
+            content = PRIVACY_PAGE.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(content)))
+            self.end_headers()
+            self.wfile.write(content)
+            return
         if request.path in self.PAGE_ROUTES:
             route, title = self.PAGE_ROUTES[request.path]
             content = PAGE.replace("__ROUTE__", route).replace("__TITLE__", title).encode("utf-8")

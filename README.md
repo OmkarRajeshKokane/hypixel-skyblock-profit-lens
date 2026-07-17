@@ -67,3 +67,10 @@ The **Budget planners** accept your available coins and inventory-slot count for
 - [Hypixel Bazaar endpoint](https://api.hypixel.net/v2/skyblock/bazaar)
 - [Hypixel SkyBlock item catalogue](https://api.hypixel.net/v2/resources/skyblock/items)
 - [Hypixel API policies](https://developer.hypixel.net/policies/)
+
+
+## Advertising setup
+
+The dashboard has responsive header and footer ad placements. They remain labelled `Advertisement` until you enter an approved AdSense client ID and ad-unit IDs in `adsense_config.js`. After approval, copy `ads.txt.template` to `ads.txt`, replace the publisher ID, and publish it at the domain root.
+
+GitHub Pages serves static files only, so this Python dashboard will need a static frontend or an API proxy before it can fetch live market data from a GitHub Pages deployment.
