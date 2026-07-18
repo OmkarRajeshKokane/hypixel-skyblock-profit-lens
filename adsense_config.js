@@ -1,13 +1,6 @@
-// Enter values only after your AdSense account and site are approved.
-// Use ad-unit IDs for manual placements, or leave rail slots empty and enable
-// Auto-ad side rails in AdSense instead. Never use made-up IDs.
+// Approved AdSense publisher ID. Add slot IDs only if you choose manual ad units.
+// With empty slots, Auto ads controls placement after it is enabled in AdSense.
 window.SKYBLOCK_ADSENSE = {
-  client: '', // Example after approval: 'ca-pub-1234567890123456'
-  slots: {
-    header: '',
-    settings: '',
-    left_rail: '',
-    right_rail: '',
-    footer: '',
-  },
+  client: 'ca-pub-4658532603581606',
+  slots: { header: '', settings: '', left_rail: '', right_rail: '', footer: '' },
 };

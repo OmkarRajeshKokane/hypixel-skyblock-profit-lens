@@ -23,6 +23,7 @@ PAGE = r"""<!doctype html>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>__TITLE__</title>
+  <script async data-adsense-loader="true" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4658532603581606" crossorigin="anonymous"></script>
   <style>
     :root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; }
     body { max-width: 1400px; margin: 0 auto; padding: 28px 18px; background: #10151c; color: #eef3f8; }
@@ -137,14 +138,14 @@ PAGE = r"""<!doctype html>
       const ads = window.SKYBLOCK_ADSENSE || {};
       const client = String(ads.client || '');
       if (!/^ca-pub-\d+$/.test(client)) return;
-      if (!document.querySelector('script[data-adsense-loader]')) {
+      if (!document.querySelector('script[src*="pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"]')) {
         const loader = document.createElement('script'); loader.async = true; loader.dataset.adsenseLoader = 'true';
         loader.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${client}`;
         loader.crossOrigin = 'anonymous'; document.head.append(loader);
       }
       for (const placeholder of document.querySelectorAll('[data-ad-slot]')) {
         const slot = String((ads.slots || {})[placeholder.dataset.adSlot] || '');
-        if (!/^\d+$/.test(slot)) continue;
+        if (!/^\d+$/.test(slot)) { placeholder.hidden = true; continue; }
         const unit = document.createElement('ins'); unit.className = 'adsbygoogle'; unit.style.display = 'block';
         unit.dataset.adClient = client; unit.dataset.adSlot = slot; unit.dataset.adFormat = 'auto'; unit.dataset.fullWidthResponsive = 'true';
         placeholder.replaceChildren(unit);
@@ -333,6 +334,18 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802
         request = urlparse(self.path)
+        if request.path == "/ads.txt":
+            ads_file = Path(__file__).with_name("ads.txt")
+            if not ads_file.exists():
+                self.send_error(404)
+                return
+            content = ads_file.read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Content-Length", str(len(content)))
+            self.end_headers()
+            self.wfile.write(content)
+            return
         if request.path == "/adsense-config.js":
             content = AD_CONFIG_FILE.read_bytes() if AD_CONFIG_FILE.exists() else b"window.SKYBLOCK_ADSENSE = {};"
             self.send_response(200)
