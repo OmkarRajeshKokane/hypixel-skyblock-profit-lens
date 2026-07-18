@@ -74,3 +74,5 @@ The **Budget planners** accept your available coins and inventory-slot count for
 The dashboard has responsive header and footer ad placements. They remain labelled `Advertisement` until you enter an approved AdSense client ID and ad-unit IDs in `adsense_config.js`. After approval, copy `ads.txt.template` to `ads.txt`, replace the publisher ID, and publish it at the domain root.
 
 GitHub Pages serves static files only, so this Python dashboard will need a static frontend or an API proxy before it can fetch live market data from a GitHub Pages deployment.
+
+The ad layout provides five manual placements: header, below settings, left rail, right rail, and footer. Side rails display only on wide desktop screens. If you use AdSense Auto ads, enable side rails in AdSense and leave the two manual rail slot IDs blank to avoid competing placements.

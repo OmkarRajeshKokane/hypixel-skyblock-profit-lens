@@ -53,6 +53,10 @@ PAGE = r"""<!doctype html>
     .error { color: #ff8e8e; }
     .ad-slot { min-height: 100px; display: grid; place-items: center; margin: 18px 0; border: 1px dashed #405266; border-radius: 8px; background: #121c26; color: #7f91a4; font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
     .ad-slot:has(ins) { display: block; min-height: 0; border-style: solid; }
+    .ad-rail { display: none; position: fixed; top: 150px; width: 140px; min-height: 600px; z-index: 2; }
+    .ad-rail-left { left: max(12px, calc(50vw - 900px)); }
+    .ad-rail-right { right: max(12px, calc(50vw - 900px)); }
+    @media (min-width: 1750px) { .ad-rail { display: grid; } }
     footer { margin: 28px 0 4px; color: #8e9baa; font-size: .85rem; }
     footer a { color: #a9caff; }
   </style>
@@ -67,6 +71,8 @@ PAGE = r"""<!doctype html>
   <p id="intro"></p>
   <button id="refresh">Refresh live prices</button><span id="status">Loading...</span>
   <div class="ad-slot" data-ad-slot="header"><span>Advertisement</span></div>
+  <aside class="ad-slot ad-rail ad-rail-left" data-ad-slot="left_rail"><span>Advertisement</span></aside>
+  <aside class="ad-slot ad-rail ad-rail-right" data-ad-slot="right_rail"><span>Advertisement</span></aside>
 
   <h2>Calculator settings</h2>
   <div class="settings">
@@ -74,6 +80,7 @@ PAGE = r"""<!doctype html>
     <label>Inventory slots <input id="inventory-slots" type="number" min="1" max="36" step="1" value="36"></label>
     <small>These settings are saved in this browser. Each row is calculated separately; it does not split your coins between rows.</small>
   </div>
+  <div class="ad-slot" data-ad-slot="settings"><span>Advertisement</span></div>
 
   <h2 id="method-title"></h2>
   <p id="formula-note"></p>
