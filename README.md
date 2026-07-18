@@ -62,6 +62,28 @@ This avoids theoretical order-flip prices that may look reversed in the Bazaar i
 
 The **Budget planners** accept your available coins and inventory-slot count for both direct routes separately: NPC-to-Bazaar and Bazaar-to-NPC. Each prioritizes profit per coin, favors full 64-item stacks, caps items at current immediate Bazaar order depth, and reports inventory fill. The two plans are alternatives, not combined allocations; prices can move or fill before you trade.
 
+
+## GitHub Pages website
+
+The repository includes a static deployment in `docs/`, ready for GitHub Pages.
+It calls Hypixel's public Bazaar and item-catalogue endpoints directly from the
+visitor's browser, so no API key, server, or local executable is required for
+the hosted calculator.
+
+After GitHub Pages is enabled with **Deploy from a branch** using `main` and
+the `/docs` folder, the public site is available at:
+
+`https://omkarrajeshkokane.github.io/hypixel-skyblock-profit-lens/`
+
+The static site has separate Bazaar-to-NPC, NPC-to-Bazaar, and Crafting-to-
+Bazaar pages. It preserves the per-row maximum-units calculation:
+
+`min(stack size × inventory slots, floor(available coins ÷ buy price), current top-price market depth)`
+
+`docs/ads.txt` is served at the site root. Live AdSense ads still require the
+site to be approved in AdSense and Auto ads enabled, or manual ad-slot IDs
+entered in `docs/adsense-config.js`.
+
 ## Data sources
 
 - [Hypixel Bazaar endpoint](https://api.hypixel.net/v2/skyblock/bazaar)
