@@ -54,6 +54,7 @@ PAGE = r"""<!doctype html>
     .error { color: #ff8e8e; }
     .ad-slot { min-height: 100px; display: grid; place-items: center; margin: 18px 0; border: 1px dashed #405266; border-radius: 8px; background: #121c26; color: #7f91a4; font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
     .ad-slot:has(ins) { display: block; min-height: 0; border-style: solid; }
+    .ad-slot.ad-preview { border-color: #7d65d8; background: #1d1835; color: #d4c7ff; }
     .ad-rail { display: none; position: fixed; top: 150px; width: 140px; min-height: 600px; z-index: 2; }
     .ad-rail-left { left: max(12px, calc(50vw - 900px)); }
     .ad-rail-right { right: max(12px, calc(50vw - 900px)); }
@@ -135,6 +136,14 @@ PAGE = r"""<!doctype html>
       const td = document.createElement('td'); td.textContent = value; td.className = className; row.append(td);
     };
     function initializeAds() {
+      const isLocalPreview = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+      if (isLocalPreview) {
+        for (const placeholder of document.querySelectorAll('[data-ad-slot]')) {
+          placeholder.hidden = false; placeholder.classList.add('ad-preview');
+          placeholder.textContent = `Ad preview: ${placeholder.dataset.adSlot.replace('_', ' ')} — live ads appear after public hosting and AdSense approval`;
+        }
+        return;
+      }
       const ads = window.SKYBLOCK_ADSENSE || {};
       const client = String(ads.client || '');
       if (!/^ca-pub-\d+$/.test(client)) return;
