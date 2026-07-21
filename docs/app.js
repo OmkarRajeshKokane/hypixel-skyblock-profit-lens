@@ -189,7 +189,7 @@ function opportunities(rows, shops, recipes) {
       if (profit <= 0 || marketDepth <= 0) return;
       plans.push({
         kind: 'crafting',
-        action: `Buy ${amount}× ${ingredient.name} from ${buySource} → craft ${output.name}`,
+        action: `Buy ${amount}× ${ingredient.name} from ${buySource} → craft ${output.name} → sell instantly at Bazaar`,
         item_name: output.name,
         ingredient_name: ingredient.name,
         buy_source: buySource,
