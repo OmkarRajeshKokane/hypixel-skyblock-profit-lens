@@ -1,7 +1,7 @@
 const route = document.body.dataset.route;
 const configs = {
   bazaar_to_npc: { title: 'Bazaar → NPC maximum-profit opportunities', intro: 'Buy Instantly at the Bazaar and sell to an NPC.', buy: 'Bazaar Buy Instantly', market: 'current Bazaar offer depth', unit: 'items' },
-  bazaar_to_bazaar: { title: 'Bazaar order → Bazaar order opportunities', intro: 'Place a competitive Bazaar buy order, then a competitive sell order. This estimates the spread after Bazaar sale tax; it does not guarantee either order will fill.', buy: 'Bazaar buy-order price', market: 'conservative top-price order-book depth', unit: 'items' },
+  bazaar_to_bazaar: { title: 'Bazaar instant buy → instant sell opportunities', intro: 'Buy Instantly at the Bazaar, then sell Instantly at the Bazaar. Bazaar spread and sale tax usually mean no profitable instant flip is available.', buy: 'Bazaar Buy Instantly price', market: 'current Bazaar offer and demand depth', unit: 'items' },
   npc_to_bazaar: { title: 'NPC → Bazaar maximum-profit opportunities', intro: 'Buy coin-only items from an NPC and sell them instantly at the Bazaar.', buy: 'NPC purchase', market: 'current Bazaar demand depth', unit: 'items' },
   npc_to_npc: { title: 'NPC → NPC maximum-profit opportunities', intro: 'Buy an item from a listed NPC shop and sell it to an NPC. The public item catalogue provides the NPC sale payout but does not identify the specific selling NPC.', buy: 'NPC purchase', market: 'inventory capacity', unit: 'items' },
   crafting: { title: 'Crafting → Bazaar maximum-profit opportunities', intro: 'Compare buying recipe materials from an NPC or the Bazaar, craft the enchanted item, then sell it instantly at the Bazaar.', buy: 'ingredient cost per craft', market: 'available input materials and Bazaar output demand', unit: 'crafts' },
@@ -28,8 +28,6 @@ function quote(summary, lowest) {
     ? (Number(order.pricePerUnit) < Number(best.pricePerUnit) ? order : best)
     : (Number(order.pricePerUnit) > Number(best.pricePerUnit) ? order : best));
 }
-
-function priceStep(price) { return price < 1_000_000 ? 0.1 : 1; }
 
 function restoreSettings() {
   try {
@@ -159,14 +157,14 @@ function opportunities(rows, shops, recipes) {
     return rows
       .filter(item => Number.isFinite(item.instantBuy) && Number.isFinite(item.instantSell))
       .map(item => {
-        const buy = item.instantSell + priceStep(item.instantSell);
-        const sell = item.instantBuy - priceStep(item.instantBuy);
+        const buy = item.instantBuy;
+        const sell = item.instantSell * (1 - TAX);
         return {
-          action: `Place Bazaar buy order for ${item.name} → place Bazaar sell order`,
+          action: `Buy ${item.name} Instantly at Bazaar → sell Instantly at Bazaar`,
           item_name: item.name,
           buy_price: buy,
-          sell_price: sell * (1 - TAX),
-          profit: sell * (1 - TAX) - buy,
+          sell_price: sell,
+          profit: sell - buy,
           market_depth: Math.min(Math.floor(item.instantBuyDepth || 0), Math.floor(item.instantSellDepth || 0)),
         };
       })
@@ -306,8 +304,8 @@ document.querySelector(`[data-route-link="${route}"]`).classList.add('active');
 document.querySelector('#intro').textContent = config.intro;
 document.querySelector('#method-title').textContent = config.title;
 document.querySelector('#action-header').textContent = route === 'crafting' ? 'What to buy → craft → sell' : 'Plan';
-document.querySelector('#buy-header').textContent = route === 'crafting' ? 'Ingredient cost / craft' : route === 'bazaar_to_bazaar' ? 'Buy-order price' : route === 'npc_to_npc' ? 'NPC buy / unit' : 'Buy / unit';
-document.querySelector('#sell-header').textContent = route === 'crafting' ? 'Net Bazaar sale / craft' : route === 'bazaar_to_bazaar' ? 'Net sell-order payout' : route === 'npc_to_npc' ? 'NPC sell / unit' : 'Sell / unit';
+document.querySelector('#buy-header').textContent = route === 'crafting' ? 'Ingredient cost / craft' : route === 'bazaar_to_bazaar' ? 'Instant-buy cost' : route === 'npc_to_npc' ? 'NPC buy / unit' : 'Buy / unit';
+document.querySelector('#sell-header').textContent = route === 'crafting' ? 'Net Bazaar sale / craft' : route === 'bazaar_to_bazaar' ? 'Net instant-sell payout' : route === 'npc_to_npc' ? 'NPC sell / unit' : 'Sell / unit';
 document.querySelector('#profit-header').textContent = route === 'crafting' ? 'Profit / craft' : 'Profit / unit';
 document.querySelector('#max-header').textContent = route === 'crafting' ? 'Max crafts' : 'Max units';
 document.querySelector('#formula-note').textContent = route === 'crafting'
