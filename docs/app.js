@@ -10,14 +10,17 @@ const BAZAAR = 'https://api.hypixel.net/v2/skyblock/bazaar';
 const ITEMS = 'https://api.hypixel.net/v2/resources/skyblock/items';
 const TAX = .0125;
 const SETTINGS_KEY = 'skyblock_profit_calculator_settings_v4';
+const NPC_DAILY_MARKS_KEY = 'skyblock_profit_npc_daily_marks_v1';
 const body = document.querySelector('#results');
 const summary = document.querySelector('#summary');
 const status = document.querySelector('#status');
 const refreshButton = document.querySelector('#refresh');
+const resetNpcMarksButton = document.querySelector('#reset-npc-marks');
 const coinsInput = document.querySelector('#available-coins');
 const slotsInput = document.querySelector('#inventory-slots');
 const exact = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 });
 let data = null;
+let npcDailyMarks = {};
 
 const coins = value => Math.abs(value) >= 1e6 ? `${(value / 1e6).toFixed(2)}M` : Math.abs(value) >= 1e3 ? `${(value / 1e3).toFixed(2)}K` : exact.format(value);
 
@@ -45,6 +48,17 @@ function settings() {
 }
 
 function saveSettings() { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings())); }
+
+function restoreNpcDailyMarks() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(NPC_DAILY_MARKS_KEY) || '{}');
+    if (saved && typeof saved === 'object' && !Array.isArray(saved)) npcDailyMarks = saved;
+  } catch {}
+}
+
+function npcMarkKey(row) { return `npc:${String(row.daily_limit_key || row.item_name).toLowerCase()}`; }
+function npcLimitUsed(row) { return Boolean(npcDailyMarks[npcMarkKey(row)]); }
+function saveNpcDailyMarks() { localStorage.setItem(NPC_DAILY_MARKS_KEY, JSON.stringify(npcDailyMarks)); }
 
 function stackDescription(items, stackSize = 64) {
   const stacks = Math.floor(items / stackSize);
@@ -92,6 +106,7 @@ function render(rows) {
 
   for (const item of calculated) {
     const row = document.createElement('tr');
+    row.classList.toggle('limit-used', Boolean(item.uses_npc_purchase && npcLimitUsed(item)));
     addCell(row, item.action, 'action');
     addCell(row, item.item_name);
     addCell(row, coins(item.buy_price), 'coins');
@@ -100,13 +115,30 @@ function render(rows) {
     addCell(row, exact.format(item.units), 'coins');
     addCell(row, item.formula, 'formula');
     addCell(row, coins(item.totalProfit), 'coins profit');
+    const markCell = document.createElement('td');
+    if (item.uses_npc_purchase) {
+      const mark = document.createElement('input');
+      mark.type = 'checkbox';
+      mark.checked = npcLimitUsed(item);
+      mark.setAttribute('aria-label', `NPC daily limit used for ${item.daily_limit_key || item.item_name}`);
+      mark.title = 'Mark this after you have bought the item from the NPC today.';
+      mark.addEventListener('change', () => {
+        npcDailyMarks[npcMarkKey(item)] = mark.checked;
+        saveNpcDailyMarks();
+        row.classList.toggle('limit-used', mark.checked);
+      });
+      markCell.append(mark);
+    } else {
+      markCell.textContent = '—';
+    }
+    row.append(markCell);
     body.append(row);
   }
 
   if (!calculated.length) {
     const row = document.createElement('tr');
     const cell = document.createElement('td');
-    cell.colSpan = 8;
+    cell.colSpan = 9;
     cell.textContent = 'No profitable opportunities are available for this route right now.';
     row.append(cell);
     body.append(row);
@@ -185,6 +217,8 @@ function opportunities(rows, shops, recipes) {
           sell_price: item.npc,
           profit: item.npc - buy,
           market_depth: 999999999,
+          uses_npc_purchase: true,
+          daily_limit_key: item.name,
         };
       })
       .filter(item => item.profit > 0);
@@ -204,6 +238,8 @@ function opportunities(rows, shops, recipes) {
           sell_price: sell,
           profit: sell - buy,
           market_depth: item.instantSellDepth,
+          uses_npc_purchase: true,
+          daily_limit_key: item.name,
         };
       })
       .filter(item => item.profit > 0);
@@ -236,6 +272,8 @@ function opportunities(rows, shops, recipes) {
         sell_price: netOutputSale,
         profit,
         market_depth: marketDepth,
+        uses_npc_purchase: buySource.startsWith('NPC ('),
+        daily_limit_key: ingredient.name,
       });
     };
 
@@ -308,11 +346,19 @@ document.querySelector('#buy-header').textContent = route === 'crafting' ? 'Ingr
 document.querySelector('#sell-header').textContent = route === 'crafting' ? 'Net Bazaar sale / craft' : route === 'bazaar_to_bazaar' ? 'Net instant-sell payout' : route === 'npc_to_npc' ? 'NPC sell / unit' : 'Sell / unit';
 document.querySelector('#profit-header').textContent = route === 'crafting' ? 'Profit / craft' : 'Profit / unit';
 document.querySelector('#max-header').textContent = route === 'crafting' ? 'Max crafts' : 'Max units';
+document.querySelector('#daily-header').textContent = 'NPC daily limit used?';
 document.querySelector('#formula-note').textContent = route === 'crafting'
   ? 'For every plan independently: maximum crafts = min(floor((64 × inventory slots) ÷ raw materials per craft), floor(available coins ÷ ingredient cost per craft), available Bazaar materials when buying there, Bazaar output demand).'
   : `For every row independently: maximum ${config.unit} = min(stack size × inventory slots, floor(available coins ÷ ${config.buy} price), ${config.market}). Total profit = maximum ${config.unit} × profit per unit.`;
 refreshButton.addEventListener('click', load);
+resetNpcMarksButton.addEventListener('click', () => {
+  if (!confirm('Clear every NPC daily-limit mark saved in this browser?')) return;
+  npcDailyMarks = {};
+  saveNpcDailyMarks();
+  if (data) render(data);
+});
 for (const input of [coinsInput, slotsInput]) input.addEventListener('input', () => { saveSettings(); if (data) render(data); });
 restoreSettings();
+restoreNpcDailyMarks();
 initializeAds();
 load();
