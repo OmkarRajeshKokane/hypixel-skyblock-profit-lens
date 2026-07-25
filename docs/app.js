@@ -2,13 +2,14 @@ const route = document.body.dataset.route;
 const configs = {
   bazaar_to_npc: { title: 'Bazaar → NPC maximum-profit opportunities', intro: 'Buy Instantly at the Bazaar and sell to an NPC.', buy: 'Bazaar Buy Instantly', market: 'current Bazaar offer depth', unit: 'items' },
   bazaar_to_bazaar: { title: 'Bazaar instant buy → instant sell opportunities', intro: 'Buy Instantly at the Bazaar, then sell Instantly at the Bazaar. Bazaar spread and sale tax usually mean no profitable instant flip is available.', buy: 'Bazaar Buy Instantly price', market: 'current Bazaar offer and demand depth', unit: 'items' },
-  npc_to_bazaar: { title: 'NPC → Bazaar maximum-profit opportunities', intro: 'Buy coin-only items from an NPC and sell them instantly at the Bazaar.', buy: 'NPC purchase', market: 'current Bazaar demand depth', unit: 'items' },
-  npc_to_npc: { title: 'NPC → NPC maximum-profit opportunities', intro: 'Buy an item from a listed NPC shop and sell it to an NPC. The public item catalogue provides the NPC sale payout but does not identify the specific selling NPC.', buy: 'NPC purchase', market: 'inventory capacity', unit: 'items' },
-  crafting: { title: 'Crafting → Bazaar maximum-profit opportunities', intro: 'Compare buying recipe materials from an NPC or the Bazaar, craft the enchanted item, then sell it instantly at the Bazaar.', buy: 'ingredient cost per craft', market: 'available input materials and Bazaar output demand', unit: 'crafts' },
+  npc_to_bazaar: { title: 'NPC → Bazaar maximum-profit opportunities', intro: 'Buy coin-only items from an NPC and sell them instantly at the Bazaar. Each NPC item is limited to 640 purchases per day.', buy: 'NPC purchase', market: 'current Bazaar demand depth', unit: 'items' },
+  npc_to_npc: { title: 'NPC → NPC maximum-profit opportunities', intro: 'Buy an item from a listed NPC shop and sell it to an NPC. Each NPC item is limited to 640 purchases per day. The public item catalogue provides the NPC sale payout but does not identify the specific selling NPC.', buy: 'NPC purchase', market: 'inventory capacity', unit: 'items' },
+  crafting: { title: 'Crafting → Bazaar maximum-profit opportunities', intro: 'Compare buying recipe materials from an NPC or the Bazaar, craft the enchanted item, then sell it instantly at the Bazaar. NPC ingredient plans are capped at 640 raw items per day.', buy: 'ingredient cost per craft', market: 'available input materials and Bazaar output demand', unit: 'crafts' },
 };
 const BAZAAR = 'https://api.hypixel.net/v2/skyblock/bazaar';
 const ITEMS = 'https://api.hypixel.net/v2/resources/skyblock/items';
 const TAX = .0125;
+const NPC_DAILY_LIMIT_ITEMS = 640;
 const SETTINGS_KEY = 'skyblock_profit_calculator_settings_v4';
 const NPC_DAILY_MARKS_KEY = 'skyblock_profit_npc_daily_marks_v1';
 const body = document.querySelector('#results');
@@ -74,7 +75,10 @@ function calculate(row) {
   const inventoryLimit = Math.floor((stackSize * slots) / inputItemsPerUnit);
   const moneyLimit = Math.floor((availableCoins + 0.000001) / row.buy_price);
   const marketLimit = Math.floor(row.market_depth || 0);
-  const units = Math.max(0, Math.min(inventoryLimit, moneyLimit, marketLimit));
+  const npcDailyLimit = row.uses_npc_purchase
+    ? (npcLimitUsed(row) ? 0 : Math.floor(NPC_DAILY_LIMIT_ITEMS / inputItemsPerUnit))
+    : Infinity;
+  const units = Math.max(0, Math.min(inventoryLimit, moneyLimit, marketLimit, npcDailyLimit));
   const totalCost = units * row.buy_price;
   const totalProfit = units * row.profit;
 
@@ -89,7 +93,7 @@ function calculate(row) {
 
   return {
     ...row, units, totalCost, totalProfit,
-    formula: `${coins(row.buy_price)} × ${exact.format(units)} = ${coins(totalCost)} (${stackDescription(units, stackSize)} at ${stackSize} per stack)`,
+    formula: `${coins(row.buy_price)} × ${exact.format(units)} = ${coins(totalCost)} (${stackDescription(units, stackSize)})`,
   };
 }
 
@@ -107,8 +111,9 @@ function render(rows) {
   for (const item of calculated) {
     const row = document.createElement('tr');
     row.classList.toggle('limit-used', Boolean(item.uses_npc_purchase && npcLimitUsed(item)));
-    addCell(row, item.action, 'action');
+    addCell(row, item.buy_from, 'source');
     addCell(row, item.item_name);
+    addCell(row, item.sell_to, 'source');
     addCell(row, coins(item.buy_price), 'coins');
     addCell(row, coins(item.sell_price), 'coins');
     addCell(row, coins(item.profit), 'coins profit');
@@ -125,7 +130,7 @@ function render(rows) {
       mark.addEventListener('change', () => {
         npcDailyMarks[npcMarkKey(item)] = mark.checked;
         saveNpcDailyMarks();
-        row.classList.toggle('limit-used', mark.checked);
+        if (data) render(data);
       });
       markCell.append(mark);
     } else {
@@ -138,7 +143,7 @@ function render(rows) {
   if (!calculated.length) {
     const row = document.createElement('tr');
     const cell = document.createElement('td');
-    cell.colSpan = 9;
+    cell.colSpan = 10;
     cell.textContent = 'No profitable opportunities are available for this route right now.';
     row.append(cell);
     body.append(row);
@@ -176,8 +181,9 @@ function opportunities(rows, shops, recipes) {
     return rows
       .filter(item => Number.isFinite(item.npc) && Number.isFinite(item.instantBuy) && item.npc > item.instantBuy)
       .map(item => ({
-        action: `Buy ${item.name} from Bazaar → sell to NPC`,
+        buy_from: 'Bazaar (Buy Instantly)',
         item_name: item.name,
+        sell_to: 'NPC',
         buy_price: item.instantBuy,
         sell_price: item.npc,
         profit: item.npc - item.instantBuy,
@@ -192,8 +198,9 @@ function opportunities(rows, shops, recipes) {
         const buy = item.instantBuy;
         const sell = item.instantSell * (1 - TAX);
         return {
-          action: `Buy ${item.name} Instantly at Bazaar → sell Instantly at Bazaar`,
+          buy_from: 'Bazaar (Buy Instantly)',
           item_name: item.name,
+          sell_to: 'Bazaar (Sell Instantly)',
           buy_price: buy,
           sell_price: sell,
           profit: sell - buy,
@@ -211,8 +218,9 @@ function opportunities(rows, shops, recipes) {
         const shop = shopByName.get(item.name.toLowerCase());
         const buy = Number(shop.npc_buy_price);
         return {
-          action: `Buy ${item.name} from ${shop.npc} → sell to an NPC`,
+          buy_from: `NPC (${shop.npc})`,
           item_name: item.name,
+          sell_to: 'NPC',
           buy_price: buy,
           sell_price: item.npc,
           profit: item.npc - buy,
@@ -232,8 +240,9 @@ function opportunities(rows, shops, recipes) {
         const buy = Number(shop.npc_buy_price);
         const sell = item.instantSell * (1 - TAX);
         return {
-          action: `Buy ${item.name} from ${shop.npc} → sell instantly at Bazaar`,
+          buy_from: `NPC (${shop.npc})`,
           item_name: item.name,
+          sell_to: 'Bazaar (Sell Instantly)',
           buy_price: buy,
           sell_price: sell,
           profit: sell - buy,
@@ -263,8 +272,9 @@ function opportunities(rows, shops, recipes) {
       if (profit <= 0 || marketDepth <= 0) return;
       plans.push({
         kind: 'crafting',
-        action: `Buy ${amount}× ${ingredient.name} from ${buySource} → craft ${output.name} → sell instantly at Bazaar`,
+        buy_from: buySource,
         item_name: output.name,
+        sell_to: 'Bazaar (Sell Instantly)',
         ingredient_name: ingredient.name,
         buy_source: buySource,
         input_items_per_unit: amount,
@@ -341,15 +351,17 @@ const config = configs[route];
 document.querySelector(`[data-route-link="${route}"]`).classList.add('active');
 document.querySelector('#intro').textContent = config.intro;
 document.querySelector('#method-title').textContent = config.title;
-document.querySelector('#action-header').textContent = route === 'crafting' ? 'What to buy → craft → sell' : 'Plan';
+document.querySelector('#buy-from-header').textContent = 'Buy from';
+document.querySelector('#item-header').textContent = route === 'crafting' ? 'Craft' : 'Item';
+document.querySelector('#sell-to-header').textContent = 'Sell to';
 document.querySelector('#buy-header').textContent = route === 'crafting' ? 'Ingredient cost / craft' : route === 'bazaar_to_bazaar' ? 'Instant-buy cost' : route === 'npc_to_npc' ? 'NPC buy / unit' : 'Buy / unit';
 document.querySelector('#sell-header').textContent = route === 'crafting' ? 'Net Bazaar sale / craft' : route === 'bazaar_to_bazaar' ? 'Net instant-sell payout' : route === 'npc_to_npc' ? 'NPC sell / unit' : 'Sell / unit';
 document.querySelector('#profit-header').textContent = route === 'crafting' ? 'Profit / craft' : 'Profit / unit';
 document.querySelector('#max-header').textContent = route === 'crafting' ? 'Max crafts' : 'Max units';
 document.querySelector('#daily-header').textContent = 'NPC daily limit used?';
 document.querySelector('#formula-note').textContent = route === 'crafting'
-  ? 'For every plan independently: maximum crafts = min(floor((64 × inventory slots) ÷ raw materials per craft), floor(available coins ÷ ingredient cost per craft), available Bazaar materials when buying there, Bazaar output demand).'
-  : `For every row independently: maximum ${config.unit} = min(stack size × inventory slots, floor(available coins ÷ ${config.buy} price), ${config.market}). Total profit = maximum ${config.unit} × profit per unit.`;
+  ? `For every plan independently: maximum crafts = min(floor((64 × inventory slots) ÷ raw materials per craft), floor(available coins ÷ ingredient cost per craft), available Bazaar materials when buying there, Bazaar output demand, floor(${NPC_DAILY_LIMIT_ITEMS} ÷ raw materials per craft) for NPC purchases).`
+  : `For every row independently: maximum ${config.unit} = min(stack size × inventory slots, floor(available coins ÷ ${config.buy} price), ${config.market}${route.startsWith('npc_') ? `, ${NPC_DAILY_LIMIT_ITEMS} daily NPC items` : ''}). Total profit = maximum ${config.unit} × profit per unit.`;
 refreshButton.addEventListener('click', load);
 resetNpcMarksButton.addEventListener('click', () => {
   if (!confirm('Clear every NPC daily-limit mark saved in this browser?')) return;
