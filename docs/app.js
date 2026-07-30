@@ -174,8 +174,11 @@ function render(rows) {
 function createRows(items, bazaar) {
   const info = new Map((items.items || []).filter(item => item.id).map(item => [item.id, item]));
   return Object.entries(bazaar.products || {}).map(([id, product]) => {
-    const buy = quote(product.sell_summary, true);
-    const sell = quote(product.buy_summary, false);
+    // Hypixel's in-game Bazaar display maps these summaries in the opposite
+    // direction from their names: Buy Instantly uses the lowest buy_summary
+    // price, while Sell Instantly uses the highest sell_summary price.
+    const buy = quote(product.buy_summary, true);
+    const sell = quote(product.sell_summary, false);
     const item = info.get(id) || {};
     return {
       id,
@@ -379,7 +382,7 @@ resetNpcMarksButton.hidden = !showNpcDailyLimitColumn;
 document.querySelector('#formula-note').textContent = route === 'crafting'
   ? `For every plan independently: maximum crafts = min(floor((64 × inventory slots) ÷ raw materials per craft), floor(available coins ÷ ingredient cost per craft), available Bazaar materials when buying there, Bazaar output demand, floor(${NPC_DAILY_LIMIT_ITEMS} ÷ raw materials per craft) for NPC purchases).`
   : route === 'bazaar_to_npc'
-    ? `Profit per item = NPC sell price − lowest Bazaar Sell Offer (the Buy Instantly cost). Maximum items = min(stack size × inventory slots, floor(available coins ÷ Buy Instantly cost), current Bazaar offer depth). Total profit = maximum items × profit per item.`
+    ? `Profit per item = NPC sell price − the Bazaar Buy Instantly price. Maximum items = min(stack size × inventory slots, floor(available coins ÷ Buy Instantly cost), quantity at that Buy Instantly price). Total profit = maximum items × profit per item.`
     : `For every row independently: maximum ${config.unit} = min(stack size × inventory slots, floor(available coins ÷ ${config.buy} price), ${config.market}${route.startsWith('npc_') ? `, ${NPC_DAILY_LIMIT_ITEMS} daily NPC items` : ''}). Total profit = maximum ${config.unit} × profit per unit.`;
 refreshButton.addEventListener('click', load);
 resetNpcMarksButton.addEventListener('click', () => {
