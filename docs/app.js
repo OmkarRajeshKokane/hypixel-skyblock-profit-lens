@@ -8,7 +8,7 @@ const configs = {
 };
 const BAZAAR = 'https://api.hypixel.net/v2/skyblock/bazaar';
 const ITEMS = 'https://api.hypixel.net/v2/resources/skyblock/items';
-const TAX = .0125;
+const DEFAULT_BAZAAR_TAX_PERCENT = 1.25;
 const NPC_DAILY_LIMIT_ITEMS = 640;
 const SETTINGS_KEY = 'skyblock_profit_calculator_settings_v4';
 const NPC_DAILY_MARKS_KEY = 'skyblock_profit_npc_daily_marks_v1';
@@ -19,9 +19,11 @@ const refreshButton = document.querySelector('#refresh');
 const resetNpcMarksButton = document.querySelector('#reset-npc-marks');
 const coinsInput = document.querySelector('#available-coins');
 const slotsInput = document.querySelector('#inventory-slots');
+const bazaarTaxInput = document.querySelector('#bazaar-tax');
 const exact = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 });
 const showNpcDailyLimitColumn = route !== 'bazaar_to_npc';
 let data = null;
+let rawMarketData = null;
 let npcDailyMarks = {};
 
 const coins = value => Math.abs(value) >= 1e6 ? `${(value / 1e6).toFixed(2)}M` : Math.abs(value) >= 1e3 ? `${(value / 1e3).toFixed(2)}K` : exact.format(value);
@@ -39,13 +41,21 @@ function restoreSettings() {
     const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
     if (Number.isFinite(saved.coins) && saved.coins >= 0) coinsInput.value = saved.coins;
     if (Number.isFinite(saved.slots) && saved.slots >= 1) slotsInput.value = Math.min(36, Math.floor(saved.slots));
+    if (Number.isFinite(saved.bazaarTaxPercent)) bazaarTaxInput.value = Math.min(100, Math.max(0, saved.bazaarTaxPercent));
   } catch {}
 }
+
+function bazaarTaxPercent() {
+  const enteredTax = Number(bazaarTaxInput.value);
+  return Math.min(100, Math.max(0, Number.isFinite(enteredTax) ? enteredTax : DEFAULT_BAZAAR_TAX_PERCENT));
+}
+function bazaarTaxRate() { return bazaarTaxPercent() / 100; }
 
 function settings() {
   return {
     coins: Math.max(0, Number(coinsInput.value) || 0),
     slots: Math.max(1, Math.min(36, Math.floor(Number(slotsInput.value) || 1))),
+    bazaarTaxPercent: bazaarTaxPercent(),
   };
 }
 
@@ -154,7 +164,7 @@ function render(rows) {
 
   const { coins: availableCoins, slots } = settings();
   summary.replaceChildren();
-  for (const value of [`Available coins: ${coins(availableCoins)}`, `Inventory capacity: ${slots} slots`, `Showing ${exact.format(calculated.length)} opportunities`]) {
+  for (const value of [`Available coins: ${coins(availableCoins)}`, `Inventory capacity: ${slots} slots`, `Bazaar sell tax: ${exact.format(bazaarTaxPercent())}%`, `Showing ${exact.format(calculated.length)} opportunities`]) {
     const chip = document.createElement('span');
     chip.textContent = value;
     summary.append(chip);
@@ -199,7 +209,7 @@ function opportunities(rows, shops, recipes) {
       .filter(item => Number.isFinite(item.instantBuy) && Number.isFinite(item.instantSell))
       .map(item => {
         const buy = item.instantBuy;
-        const sell = item.instantSell * (1 - TAX);
+        const sell = item.instantSell * (1 - bazaarTaxRate());
         return {
           buy_from: 'Bazaar (Buy Instantly)',
           item_name: item.name,
@@ -241,7 +251,7 @@ function opportunities(rows, shops, recipes) {
       .map(item => {
         const shop = shopByName.get(item.name.toLowerCase());
         const buy = Number(shop.npc_buy_price);
-        const sell = item.instantSell * (1 - TAX);
+        const sell = item.instantSell * (1 - bazaarTaxRate());
         return {
           buy_from: `NPC (${shop.npc})`,
           item_name: item.name,
@@ -265,7 +275,7 @@ function opportunities(rows, shops, recipes) {
     const output = byName.get(recipe.crafted_item.toLowerCase());
     if (!ingredient || !output || !Number.isFinite(output.instantSell)) continue;
 
-    const netOutputSale = output.instantSell * (1 - TAX);
+    const netOutputSale = output.instantSell * (1 - bazaarTaxRate());
     const addPlan = (buySource, ingredientPrice, ingredientCraftLimit) => {
       if (!Number.isFinite(ingredientPrice)) return;
       const buy = ingredientPrice * amount;
@@ -339,6 +349,7 @@ async function load() {
       fetch('./enchanted_recipes.json').then(response => response.json()),
     ]);
     if (!items.success || !bazaar.success) throw Error('Hypixel API did not return market data.');
+    rawMarketData = { items, bazaar, shops, recipes };
     data = opportunities(createRows(items, bazaar), shops, recipes);
     render(data);
     status.textContent = `${exact.format(data.length)} opportunities | updated ${new Date().toLocaleTimeString()}`;
@@ -378,6 +389,12 @@ resetNpcMarksButton.addEventListener('click', () => {
   if (data) render(data);
 });
 for (const input of [coinsInput, slotsInput]) input.addEventListener('input', () => { saveSettings(); if (data) render(data); });
+bazaarTaxInput.addEventListener('input', () => {
+  saveSettings();
+  if (!rawMarketData) return;
+  data = opportunities(createRows(rawMarketData.items, rawMarketData.bazaar), rawMarketData.shops, rawMarketData.recipes);
+  render(data);
+});
 restoreSettings();
 restoreNpcDailyMarks();
 initializeAds();
