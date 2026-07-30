@@ -20,6 +20,7 @@ const resetNpcMarksButton = document.querySelector('#reset-npc-marks');
 const coinsInput = document.querySelector('#available-coins');
 const slotsInput = document.querySelector('#inventory-slots');
 const exact = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 });
+const showNpcDailyLimitColumn = route !== 'bazaar_to_npc';
 let data = null;
 let npcDailyMarks = {};
 
@@ -120,30 +121,32 @@ function render(rows) {
     addCell(row, exact.format(item.units), 'coins');
     addCell(row, item.formula, 'formula');
     addCell(row, coins(item.totalProfit), 'coins profit');
-    const markCell = document.createElement('td');
-    if (item.uses_npc_purchase) {
-      const mark = document.createElement('input');
-      mark.type = 'checkbox';
-      mark.checked = npcLimitUsed(item);
-      mark.setAttribute('aria-label', `NPC daily limit used for ${item.daily_limit_key || item.item_name}`);
-      mark.title = 'Mark this after you have bought the item from the NPC today.';
-      mark.addEventListener('change', () => {
-        npcDailyMarks[npcMarkKey(item)] = mark.checked;
-        saveNpcDailyMarks();
-        if (data) render(data);
-      });
-      markCell.append(mark);
-    } else {
-      markCell.textContent = '—';
+    if (showNpcDailyLimitColumn) {
+      const markCell = document.createElement('td');
+      if (item.uses_npc_purchase) {
+        const mark = document.createElement('input');
+        mark.type = 'checkbox';
+        mark.checked = npcLimitUsed(item);
+        mark.setAttribute('aria-label', `NPC daily limit used for ${item.daily_limit_key || item.item_name}`);
+        mark.title = 'Mark this after you have bought the item from the NPC today.';
+        mark.addEventListener('change', () => {
+          npcDailyMarks[npcMarkKey(item)] = mark.checked;
+          saveNpcDailyMarks();
+          if (data) render(data);
+        });
+        markCell.append(mark);
+      } else {
+        markCell.textContent = '—';
+      }
+      row.append(markCell);
     }
-    row.append(markCell);
     body.append(row);
   }
 
   if (!calculated.length) {
     const row = document.createElement('tr');
     const cell = document.createElement('td');
-    cell.colSpan = 10;
+    cell.colSpan = showNpcDailyLimitColumn ? 10 : 9;
     cell.textContent = 'No profitable opportunities are available for this route right now.';
     row.append(cell);
     body.append(row);
@@ -161,8 +164,8 @@ function render(rows) {
 function createRows(items, bazaar) {
   const info = new Map((items.items || []).filter(item => item.id).map(item => [item.id, item]));
   return Object.entries(bazaar.products || {}).map(([id, product]) => {
-    const buy = quote(product.buy_summary, true);
-    const sell = quote(product.sell_summary, false);
+    const buy = quote(product.sell_summary, true);
+    const sell = quote(product.buy_summary, false);
     const item = info.get(id) || {};
     return {
       id,
@@ -358,10 +361,15 @@ document.querySelector('#buy-header').textContent = route === 'crafting' ? 'Ingr
 document.querySelector('#sell-header').textContent = route === 'crafting' ? 'Net Bazaar sale / craft' : route === 'bazaar_to_bazaar' ? 'Net instant-sell payout' : route === 'npc_to_npc' ? 'NPC sell / unit' : 'Sell / unit';
 document.querySelector('#profit-header').textContent = route === 'crafting' ? 'Profit / craft' : 'Profit / unit';
 document.querySelector('#max-header').textContent = route === 'crafting' ? 'Max crafts' : 'Max units';
-document.querySelector('#daily-header').textContent = 'NPC daily limit used?';
+const dailyHeader = document.querySelector('#daily-header');
+dailyHeader.textContent = 'NPC daily limit used?';
+dailyHeader.hidden = !showNpcDailyLimitColumn;
+resetNpcMarksButton.hidden = !showNpcDailyLimitColumn;
 document.querySelector('#formula-note').textContent = route === 'crafting'
   ? `For every plan independently: maximum crafts = min(floor((64 × inventory slots) ÷ raw materials per craft), floor(available coins ÷ ingredient cost per craft), available Bazaar materials when buying there, Bazaar output demand, floor(${NPC_DAILY_LIMIT_ITEMS} ÷ raw materials per craft) for NPC purchases).`
-  : `For every row independently: maximum ${config.unit} = min(stack size × inventory slots, floor(available coins ÷ ${config.buy} price), ${config.market}${route.startsWith('npc_') ? `, ${NPC_DAILY_LIMIT_ITEMS} daily NPC items` : ''}). Total profit = maximum ${config.unit} × profit per unit.`;
+  : route === 'bazaar_to_npc'
+    ? `Profit per item = NPC sell price − lowest Bazaar Sell Offer (the Buy Instantly cost). Maximum items = min(stack size × inventory slots, floor(available coins ÷ Buy Instantly cost), current Bazaar offer depth). Total profit = maximum items × profit per item.`
+    : `For every row independently: maximum ${config.unit} = min(stack size × inventory slots, floor(available coins ÷ ${config.buy} price), ${config.market}${route.startsWith('npc_') ? `, ${NPC_DAILY_LIMIT_ITEMS} daily NPC items` : ''}). Total profit = maximum ${config.unit} × profit per unit.`;
 refreshButton.addEventListener('click', load);
 resetNpcMarksButton.addEventListener('click', () => {
   if (!confirm('Clear every NPC daily-limit mark saved in this browser?')) return;
