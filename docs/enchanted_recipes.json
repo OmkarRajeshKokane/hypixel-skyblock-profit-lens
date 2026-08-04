@@ -29,7 +29,7 @@
   {"base_item": "Magma Cream", "crafted_item": "Enchanted Magma Cream", "amount": 160},
   {"base_item": "Ghast Tear", "crafted_item": "Enchanted Ghast Tear", "amount": 160},
   {"base_item": "Ice", "crafted_item": "Enchanted Ice", "amount": 160},
-  {"base_item": "Packed Ice", "crafted_item": "Enchanted Packed Ice", "amount": 160},
+  {"base_item": "Enchanted Ice", "crafted_item": "Enchanted Packed Ice", "amount": 160},
   {"base_item": "Gravel", "crafted_item": "Enchanted Gravel", "amount": 160},
   {"base_item": "Flint", "crafted_item": "Enchanted Flint", "amount": 160},
   {"base_item": "End Stone", "crafted_item": "Enchanted Endstone", "amount": 160},

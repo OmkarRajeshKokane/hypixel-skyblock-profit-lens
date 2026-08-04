@@ -98,7 +98,7 @@ function calculate(row) {
     const rawStacks = stackDescription(rawItems, stackSize);
     return {
       ...row, units, totalCost, totalProfit,
-      formula: `Buy ${exact.format(rawItems)}× ${row.ingredient_name} from ${row.buy_source} (${rawStacks}) → craft ${exact.format(units)}× ${row.item_name}; ${coins(row.buy_price)} × ${exact.format(units)} = ${coins(totalCost)}`,
+      formula: `Buy ${exact.format(rawItems)}× ${row.ingredient_name} from ${row.buy_source} (${rawStacks}) → craft ${exact.format(units)}× ${row.item_name}; ${coins(row.ingredient_unit_price)} × ${exact.format(inputItemsPerUnit)} = ${coins(row.buy_price)} per craft; ${coins(row.buy_price)} × ${exact.format(units)} = ${coins(totalCost)}`,
     };
   }
 
@@ -294,6 +294,7 @@ function opportunities(rows, shops, recipes) {
         ingredient_name: ingredient.name,
         buy_source: buySource,
         input_items_per_unit: amount,
+        ingredient_unit_price: ingredientPrice,
         buy_price: buy,
         sell_price: netOutputSale,
         profit,
