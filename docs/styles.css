@@ -18,3 +18,5 @@ button:disabled { opacity: .6; cursor: wait; } #status { margin-left: 12px; colo
 .secondary { background: #273545; color: #dce7f2; }
 .limit-used td { opacity: .52; }
 td:has(input[type="checkbox"]) { text-align: center; }
+
+.visit-counter{display:inline-flex;align-items:center;gap:7px;margin-left:12px;vertical-align:middle}.visit-counter img{display:block;height:20px;max-width:100%}.visit-counter small{color:#8e9baa}
