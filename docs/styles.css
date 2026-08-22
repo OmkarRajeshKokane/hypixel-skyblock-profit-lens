@@ -20,3 +20,5 @@ button:disabled { opacity: .6; cursor: wait; } #status { margin-left: 12px; colo
 td:has(input[type="checkbox"]) { text-align: center; }
 
 .visit-counter{display:inline-flex;align-items:center;gap:7px;margin-left:12px;vertical-align:middle}.visit-counter img{display:block;height:20px;max-width:100%}.visit-counter small{color:#8e9baa}
+
+.home-visit-counter{margin:0 0 16px;padding:10px 12px;border:1px solid #2a3542;border-radius:8px;background:#18212b;width:fit-content}.home-visit-counter strong{color:#dce7f2}
