@@ -22,3 +22,5 @@ td:has(input[type="checkbox"]) { text-align: center; }
 .visit-counter{display:inline-flex;align-items:center;gap:7px;margin-left:12px;vertical-align:middle}.visit-counter img{display:block;height:20px;max-width:100%}.visit-counter small{color:#8e9baa}
 
 .home-visit-counter{margin:0 0 16px;padding:10px 12px;border:1px solid #2a3542;border-radius:8px;background:#18212b;width:fit-content}.home-visit-counter strong{color:#dce7f2}
+
+.route-guide{margin:32px 0 22px;padding:22px;border:1px solid #2a3542;border-radius:10px;background:#141c25}.route-guide h2{margin:4px 0 12px}.route-guide h3{margin:20px 0 8px;color:#dce7f2}.route-guide li{margin:7px 0;color:#b8c5d2}.route-guide .eyebrow{margin:0 0 8px;color:#72e3a4;font-size:.78rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
