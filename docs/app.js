@@ -59,7 +59,7 @@ function settings() {
   };
 }
 
-function saveSettings() { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings())); }
+function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings())); } catch {} }
 
 function restoreNpcDailyMarks() {
   try {
@@ -70,7 +70,7 @@ function restoreNpcDailyMarks() {
 
 function npcMarkKey(row) { return `npc:${String(row.daily_limit_key || row.item_name).toLowerCase()}`; }
 function npcLimitUsed(row) { return Boolean(npcDailyMarks[npcMarkKey(row)]); }
-function saveNpcDailyMarks() { localStorage.setItem(NPC_DAILY_MARKS_KEY, JSON.stringify(npcDailyMarks)); }
+function saveNpcDailyMarks() { try { localStorage.setItem(NPC_DAILY_MARKS_KEY, JSON.stringify(npcDailyMarks)); } catch {} }
 
 function stackDescription(items, stackSize = 64) {
   const stacks = Math.floor(items / stackSize);
@@ -341,23 +341,44 @@ function initializeAds() {
   }
 }
 
+async function fetchJson(url, timeoutMs = 15000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) throw new Error('Data request failed (HTTP ' + response.status + ').');
+    return await response.json();
+  } catch (error) {
+    if (controller.signal.aborted) throw new Error('Data request timed out. Please try Refresh live prices again.');
+    throw error;
+  } finally { clearTimeout(timeout); }
+}
+
 async function load() {
   refreshButton.disabled = true;
+  data = null;
+  rawMarketData = null;
+  body.replaceChildren();
+  summary.replaceChildren();
   status.className = '';
   status.textContent = 'Loading live Hypixel market data...';
   try {
     const [items, bazaar, shops, recipes] = await Promise.all([
-      fetch(ITEMS).then(response => response.json()),
-      fetch(BAZAAR).then(response => response.json()),
-      fetch('./npc_shop_prices.json').then(response => response.json()),
-      fetch('./enchanted_recipes.json').then(response => response.json()),
+      fetchJson(ITEMS),
+      fetchJson(BAZAAR),
+      fetchJson('./npc_shop_prices.json'),
+      fetchJson('./enchanted_recipes.json'),
     ]);
-    if (!items.success || !bazaar.success) throw Error('Hypixel API did not return market data.');
+    if (!items?.success || !bazaar?.success || !Array.isArray(items.items) || !bazaar.products || typeof bazaar.products !== 'object' || !Array.isArray(shops) || !Array.isArray(recipes)) throw Error('Hypixel API did not return market data.');
     rawMarketData = { items, bazaar, shops, recipes };
     data = opportunities(createRows(items, bazaar), shops, recipes);
     render(data);
     status.textContent = `${exact.format(data.length)} opportunities | updated ${new Date().toLocaleTimeString()}`;
   } catch (error) {
+    data = null;
+    rawMarketData = null;
+    body.replaceChildren();
+    summary.replaceChildren();
     status.className = 'error';
     status.textContent = `Could not load live data: ${error.message}`;
   } finally {

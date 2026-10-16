@@ -1,0 +1,63 @@
+AdSense preparation — 16 October 2026
+
+Status: code fixes prepared locally; not published; no AdSense review requested.
+Account: user confirmed Payments profile Country/Region is India. No evidence
+currently supports replacing the account or treating Italy as the rejection cause.
+
+Changes
+- Corrected the ad-configuration script filename on all five calculator pages.
+- Added 15-second request timeouts, HTTP-status and response-shape checks.
+- Clear results when refreshing or when refresh fails, so old quotes are not
+  presented as current opportunities. A failed request leaves Refresh available.
+- Storage write failures no longer interrupt calculator updates.
+- Added accessible loading status and a JavaScript-disabled explanation.
+- Expanded calculator privacy disclosures and advertising opt-out links.
+- Added project-local methodology and worked examples; navigation no longer
+  depends on the separate account-root website for those pages.
+- Removed the misleading 'Approved publisher ID' comment. An ID is not approval.
+
+Validation completed
+Run: node --test tests/calculator.test.cjs
+Seven tests passed, including five routes with controlled market fixtures,
+budget/inventory arithmetic, network errors, retry, timeout, malformed data,
+storage failures, and relative HTML link/asset existence.
+node --check docs/app.js and git diff --check passed.
+These checks use a minimal DOM fixture, not a rendered browser or real market
+requests. Mobile appearance, real API availability/CORS, and consent behavior
+still need browser checks. No approval guarantee follows from these tests.
+
+Publish and verify before requesting review
+1. Review the changed files. Publish them to this repository's main branch only
+   when ready. Confirm GitHub Pages uses main /docs (the README describes this
+   configuration; actual hosting settings were not inspected).
+2. Verify each of the five live modes on desktop and mobile. Confirm the corrected
+   adsense_config.js URL loads. Check that real prices load and input changes work.
+   With networking disabled, confirm results clear and an error appears; restore
+   networking and Refresh. Empty profitable results alone are not a failure.
+3. Compare a small sample of routes with the in-game confirmation and check NPC
+   reference prices/recipes. No claim is made that every maintained game value
+   remains current. NPC marks are persistent and must be reset manually.
+4. Review the separate root website at omkarrajeshkokane.github.io. Its privacy,
+   guides, and about pages are outside this repository and were not edited.
+   Align privacy disclosures across both sets of pages. Verify the advertising
+   partners enabled in AdSense and disclose the applicable providers and links.
+5. Configure and verify a Google-certified CMP for relevant European traffic in
+   AdSense Privacy & messaging. The privacy text is not a substitute for consent
+   controls. No consent deployment or account configuration was changed here.
+6. Confirm domain-root /ads.txt still matches this account. This repository's
+   docs/ads.txt is hosted under the project path, not the account-root domain;
+   the domain-root file was present during the earlier review.
+7. Read the latest rejection email for specific account, duplicate-account, or
+   site issues. The generic programme-policies message is not an exact diagnosis.
+8. In AdSense, review any identity/address/tax/payment alerts privately. 'We've got
+   your info' does not establish completion of all verification requirements.
+   Do not infer tax residency from payment country or physical location.
+9. Add/connect the intended site using the existing account. Verify ownership.
+   Request review only after the checks above and the user's explicit approval.
+
+Official references
+https://support.google.com/adsense/answer/81904?hl=en
+https://support.google.com/adsense/answer/1348695?hl=en
+https://support.google.com/adsense/answer/13554116?hl=en
+https://support.google.com/adsense/answer/12169212?hl=en
+https://support.google.com/adsense/answer/2628816?hl=en

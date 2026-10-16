@@ -80,9 +80,9 @@ Bazaar pages. It preserves the per-row maximum-units calculation:
 
 `min(stack size × inventory slots, floor(available coins ÷ buy price), current top-price market depth)`
 
-`docs/ads.txt` is served at the site root. Live AdSense ads still require the
+`docs/ads.txt` is served under the project path. Also maintain ads.txt at the account-root domain; this project file does not replace that domain-root file. Live AdSense ads still require the
 site to be approved in AdSense and Auto ads enabled, or manual ad-slot IDs
-entered in `docs/adsense-config.js`.
+entered in `docs/adsense_config.js`.
 
 ## Data sources
 
@@ -98,3 +98,8 @@ The dashboard has responsive header and footer ad placements. They remain labell
 GitHub Pages serves static files only, so this Python dashboard will need a static frontend or an API proxy before it can fetch live market data from a GitHub Pages deployment.
 
 The ad layout provides five manual placements: header, below settings, left rail, right rail, and footer. Side rails display only on wide desktop screens. If you use AdSense Auto ads, enable side rails in AdSense and leave the two manual rail slot IDs blank to avoid competing placements.
+
+
+## Pre-submission checks
+
+See ADSENSE-READINESS.txt for changes, validation, and outstanding checks before requesting an AdSense review. Run the offline regression suite with: node --test tests/calculator.test.cjs
